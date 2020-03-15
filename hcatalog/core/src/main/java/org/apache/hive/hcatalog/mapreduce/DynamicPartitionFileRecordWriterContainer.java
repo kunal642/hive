@@ -108,8 +108,7 @@ class DynamicPartitionFileRecordWriterContainer extends FileRecordWriterContaine
           String dynKey = outputJobInfoEntry.getKey();
           OutputJobInfo outputJobInfo = outputJobInfoEntry.getValue();
           LOG.info("Aborting task-attempt for " + outputJobInfo.getLocation());
-          baseDynamicCommitters.get(dynKey)
-                               .abortTask(dynamicContexts.get(dynKey));
+          baseDynamicCommitters.get(dynKey).abortTask(dynamicContexts.get(dynKey));
         }
       }
 
@@ -123,8 +122,7 @@ class DynamicPartitionFileRecordWriterContainer extends FileRecordWriterContaine
           OutputCommitter dynCommitter = baseDynamicCommitters.get(dynKey);
           if (dynCommitter.needsTaskCommit(dynContext)) {
             dynCommitter.commitTask(dynContext);
-          }
-          else {
+          } else {
             LOG.info("Skipping commitTask() for " + outputJobInfo.getLocation());
           }
         }

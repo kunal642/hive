@@ -341,7 +341,9 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
           }
         }
       } else {
-        finalPaths[filesIdx] = outPaths[filesIdx] = specPath;
+        this.finalPaths[filesIdx] = this.outPaths[filesIdx] = this.subdirBeforeTxn != null ?
+            new Path(FileSinkOperator.this.specPath.toString(), this.subdirBeforeTxn) :
+            FileSinkOperator.this.specPath;
       }
     }
 

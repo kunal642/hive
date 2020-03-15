@@ -72,6 +72,7 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -2126,7 +2127,8 @@ private void constructOneLBLocationMap(FileStatus fSta,
     try {
       FileSystem fs = loadPath.getFileSystem(conf);
       if (!isMmTable) {
-        List<FileStatus> leafStatus = HiveStatsUtils.getFileStatusRecurse(loadPath, numDP, fs);
+        List<FileStatus> leafStatus = HiveStatsUtils
+            .getFileStatusRecurse(loadPath, numDP, fs, FileUtils.FILTER_PARTITION_FOLDERS);
         // Check for empty partitions
         for (FileStatus s : leafStatus) {
           if (!s.isDirectory()) {
@@ -2358,6 +2360,9 @@ private void constructOneLBLocationMap(FileStatus fSta,
       // Either a non-MM query, or a load into MM table from an external source.
       Path tblPath = tbl.getPath();
       Path destPath = tblPath;
+      if (tbl.getStorageHandler().getInputFormatClass().getName().equalsIgnoreCase("org.apache.carbondata.hive.MapredCarbonOutputFormat") && tbl.getPath().equals(destPath)) {
+        return;
+      }
       if (isMmTable) {
         assert !isAcidIUDoperation;
         // We will load into MM directory, and hide previous directories if needed.
@@ -3573,7 +3578,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
         parent = parent.getParent();
       }
       FileStatus[] existingFiles = destFS.listStatus(
-          dest, FileUtils.HIDDEN_FILES_PATH_FILTER);
+          dest, FileUtils.HIDDEN_AND_CARBON_PATH_FILTER);
       for (FileStatus fileStatus : existingFiles) {
         if (!fileStatus.getPath().getName().equals(parent.getName())) {
           destFS.delete(fileStatus.getPath(), true);
@@ -3694,6 +3699,12 @@ private void constructOneLBLocationMap(FileStatus fSta,
             }
             /* Move files one by one because source is a subdirectory of destination */
             for (final FileStatus srcStatus : srcs) {
+              // In case the directory to be moved is empty, no need to copy.
+              if ((srcStatus.isDirectory() && !destFs.listFiles(srcStatus.getPath(), false).hasNext())
+                  || srcStatus.getPath().toString().endsWith(".carbondata") || srcStatus.getPath().toString()
+                  .endsWith(".carbonindex")) {
+                continue;
+              }
 
               final Path destFile = new Path(destf, srcStatus.getPath().getName());
 
